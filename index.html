@@ -236,7 +236,7 @@ TestSet &lt;- ValidSet0[-innValid, ]
 any(ValidSet %in% TrainSet)  # check for overlap, there is none
 any(TestSet %in% TrainSet)  # same as above
 any(TestSet %in% ValidSet)  # same as above</code></pre>
-<p><br /> Now that we have partitioned the data let’s use the new training and validation sets to estimate the out of sample accuracy of our models. As with the benchmark models we will use 5-fold cross validation with each for comparability. Cross validation also gives us generalizability via avoidance of overfitting and high variance. Also, recall that as the number of folds used for CV increases bias decreases as variance increases. I tried values between 2 and 10 and found that 5 was close to optimal.</p>
+<p><br /> Now that we have partitioned the data, let’s use the new training and validation sets to estimate the out of sample accuracy of our models. As with the benchmark models we will use 5-fold cross validation with each for comparability. Cross validation also gives us generalizability via avoidance of overfitting and high variance. Also, recall that as the number of folds used for CV increases bias decreases as variance increases. I tried values between 2 and 10 and found that 5 was close to optimal.</p>
 <pre class="r"><code>control &lt;- trainControl(method = &quot;cv&quot;, number = 5)  # again, we use 5-fold CV
 
 # now we train new models on the 'new' training set and we test for
@@ -284,7 +284,7 @@ TestSet$gbm_preds &lt;- predict(model4, newdata = TestSet[, names(TestSet) != &q
 <p>[1] 0.703515</p>
 <pre class="r"><code>mean(ValidSet$gbm_preds == ValidSet$classe)  # gbm</code></pre>
 <p>[1] 0.9689251</p>
-<p><br /> Our estimates of out of sample accuracy weren’t that far off from our in-sample estiamtes of error. That is not too surprising considering we intentionally used feature elimination and cross validation to avoid overfitting. Of course, we also employed boosting and bagging as well in the gbm and tree based methods respectively. Also note that as we fit these models we also added their predictions as additional columns to the validation and ‘testing’ datasets. This can allow us to build either a blended model that uses features from the datasets along with the predictions, or a stacked model that uses only the predictions themselves. To use only the predictions themselves they must be pulled into a dedicated data frame. Since this was the manual ensembling technique presented by Dr. Peng I chose to try this first. Also, I chose to leave out the lda model as it was the poorest performer.</p>
+<p><br /> Our estimates of out of sample accuracy weren’t that far off from our in-sample estimates of error. That is not too surprising considering we intentionally used feature elimination and cross validation to avoid overfitting. Of course, we also employed boosting and bagging as well in the gbm and tree based methods respectively. Also note that as we fit these models we added their predictions as additional columns to the validation and ‘testing’ datasets. This can allow us to build either a blended model that uses features from the datasets along with the predictions, or a stacked model that uses only the predictions themselves. To use only the predictions themselves they must be pulled into a dedicated data frame. Since this was the manual ensembling technique presented by Dr. Peng I chose to try this first. Also, I chose to leave out the lda model as it was the poorest performer.</p>
 <pre class="r"><code># Next we create a dataframe with just the validation set predictions
 # from all of the models
 PredsDF_V&lt;-data.frame(rfPreds = ValidSet$rf_preds,
@@ -313,7 +313,7 @@ TestPreds&lt;- predict(StackedMod, PredsDF_T)
 # better assessment of the out of sample accuracy (~0.986)
 mean(TestPreds==TestSet$classe)
 confusionMatrix(TestPreds,TestSet$classe)</code></pre>
-<p><br /> Unfortunately, our accuracy with the stacked model was not any real increase over the rf model alone! Let’s compare its performance with the accuracies of the individual models on our ‘new’ test dataset. Also, I was curious how a simple majority vote based on the predictions of the three individual models would compare to our stacked model.</p>
+<p><br /> Unfortunately, our accuracy with the stacked model was not really any better the rf model alone. Let’s compare its performance with the accuracies of the individual models on our ‘new’ test dataset. Also, I was curious how a simple majority vote based on the predictions of the three individual models would compare to our stacked model.</p>
 <pre class="r"><code>mean(TestPreds == TestSet$classe)</code></pre>
 <p>[1] 0.9918367</p>
 <pre class="r"><code># compare to individual model accuracy
@@ -333,7 +333,7 @@ Mode &lt;- function(x) {
 }</code></pre>
 <pre class="r"><code>mean(PredsDF_T$classe == PredsDF_T$maj)  # boo!</code></pre>
 <p>[1] 0.9918367</p>
-<p>So, it appears that we should perhaps try something else. Since ensembling frequently increases the accuracy above that of a single model, I decided to evaluate a blended model that only incorporated the rf and the treebag models, as they had the highest estimates of out of sample error. To do this we want to verify our choice of features for the rf model, since it is the highest performer. We will also create a new data frame that contains the features that we have chosen as being of high importance to both the rf and the treebag models.</p>
+<p>So, it appears that we should perhaps try something else. Since ensembling frequently increases the accuracy above that of a single model, I decided to evaluate a blended model that only incorporated the rf and the treebag models, as they had the lowest estimates of out of sample error. To do this we want to verify our choice of features for the rf model, since it is the highest performer. We will also create a new data frame that contains the features that we have chosen as being of high importance to both the rf and the treebag models.</p>
 <pre class="r"><code># this call to rfcv() verifies that ~14+ is a good number of predictors for
 # rf
 result &lt;- rfcv(pml2[, names(pml2) != &quot;classe&quot;], pml2$classe, cv.fold = 10)</code></pre>
@@ -354,7 +354,7 @@ TestSet &lt;- ValidSet0[-innValid, ]
 any(ValidSet %in% TrainSet)  # check for overlap, there is none
 any(TestSet %in% TrainSet)  # same as above
 any(TestSet %in% ValidSet)  # same as above</code></pre>
-<p><br /> Just like we did with the individual models that we used to create the stacked model, we will estimate out of sample error and then compare those values to the accuracy of the final ensembled model. The code is similar to that for the stacked except that we are using all of the predictors used to train the component models (18 available in the data sets we’re using for this purpose) and the predictions those models made all together to train the final blended model. Also, we’ve used 10-fold CV in the model training, as I found heuristically that this was close to optimal.</p>
+<p><br /> Just like we did with the individual models that we used to create the stacked model, we will estimate out of sample error and then compare those values to the accuracy of the final ensembled model. The code is similar to that for the stacked model except that we are using all of the predictors used to train the component models (18 available in the data sets we’re using for this purpose) and the predictions those models made all together to train the final blended model. Also, we’ve used 10-fold CV in the model training, as I found heuristically that this was close to optimal.</p>
 <pre class="r"><code>control &lt;- trainControl(method = &quot;cv&quot;, number = 10)  # here we'll use 10-fold CV
 
 # now we train new models on the new 'new' training set and we test for
