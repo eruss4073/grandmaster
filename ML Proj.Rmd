@@ -20,6 +20,7 @@ knitr::opts_chunk$set(
 
   
 The first thing we to do is download the training data. Next we load the data and have a look at it and notice that there are a number of columns that contain almost all NAs and a number of columns that are virtually all blank space. Since there is very little data in those columns and this is a relatively large dataset we can just remove the offending columns. We will also remove the first 7 columns which do not contain useful information.
+
 ```{r, echo=TRUE, eval=TRUE, results='hide'}
 library(RCurl)
 myfile<-getURL('https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv',
@@ -33,7 +34,8 @@ pml2<-pml2[,8:60]
 ```
 
   <br/>
-Now that we have our data cleaned up we can start to choose which of the potential features present in the dataset we are going to use to build our benchmark models. We will use these models to compare between one another to decide what model(s) we want to use later on. To do this we need to load the caret library and then set control attributes and carry out recursive feature elimination to choose features to be used by each of our candidate models. We could have alternately used the Borunta library for this purpose. Notice that we specify 4-fold cross validation in the control attributes to counteract any overfitting due to feature selection.
+Now that we have our data cleaned up we can start to choose which of the potential features present in the dataset we are going to use to build our benchmark models. We will use these models to compare between one another to decide what model(s) we want to use later on. To do this we need to load the caret library and then set control attributes and carry out recursive feature elimination to choose features to be used by each of our candidate models. We could have alternately used the Borunta library for this purpose. Notice that we specify 4-fold cross validation in the control attributes to counteract any overfitting due to feature selection.  
+
 ```{r echo=TRUE, eval=TRUE, results='hide'}
 library(caret)
 control1 <- rfeControl(functions=rfFuncs, method="cv", number=4)
@@ -56,6 +58,7 @@ system.time(
 
   <br/>
 Now we can look at plots of the predictors, or features, indicated by the result of our recursive feature elimination calls. Only the first results are included for illustration.
+
 ```{r eval=FALSE, echo=TRUE, results='hide', fig.show='hide'}
 predictors(results1) # in order of importance
 plot(results1, type=c("g", "o")) # how many features do we need? (13-14+)
@@ -73,7 +76,8 @@ plot(results1, type=c("g", "o"))
 ```
 
   <br/>
-In order to compare the accuracy of our models (rf, treebag, lda, and gbm) we need to train what I call benchmark models using the features indicated by our previous feature elimination efforts. I chose rf and treebag because they are high performers on datasets like the one we were provided. I also included an lda model for general illustrative purposes, and added a gradient boosting machine (gbm) model because they also frequently perform well. Since the caret documentation considers gbm models to self select features, I did not carry out RFE for the gbm model. So, we are trying 2 bagged decision tree approaches, a linear discriminant approach, and a boosted decision tree approach.
+In order to compare the accuracy of our models (rf, treebag, lda, and gbm) we need to train what I call benchmark models using the features indicated by our previous feature elimination efforts. I chose rf and treebag because they are high performers on datasets like the one we were provided. I also included an lda model for general illustrative purposes, and added a gradient boosting machine (gbm) model because they also frequently perform well. Since the caret documentation considers gbm models to self select features, I did not carry out RFE for the gbm model. So, we are trying 2 bagged decision tree approaches, a linear discriminant approach, and a boosted decision tree approach.  
+
 ```{r eval=TRUE, echo=TRUE, results='hide', fig.show='hide'}
 control <- trainControl(method="cv", number=5) #using 5-fold cross validation
 bench1 <- train(classe~.,
@@ -128,7 +132,8 @@ mean(a3==pml2[,"classe"]) # lda
 mean(a4==pml2[,"classe"]) # gbm
 ```
 
-We now have some indication of the in-sample accuracy of the four models we've tried, but we need an estimate of out of sample accuracy as well. I also decided to try and stack the three best performing candidates, namely rf, treebag, and gbm. So, we must break up our training dataset into three parts. Different people call them different things, but I will call them training, validation, and testing sets. This splitting is accomplished randomly to ensure that there are sufficient rows in each set with all of the possible outcome values. This in necessary since the original data has large runs of ascending rows with only a single outcome level.
+We now have some indication of the in-sample accuracy of the four models we've tried, but we need an estimate of out of sample accuracy as well. I also decided to try and stack the three best performing candidates, namely rf, treebag, and gbm. So, we must break up our training dataset into three parts. Different people call them different things, but I will call them training, validation, and testing sets. This splitting is accomplished randomly to ensure that there are sufficient rows in each set with all of the possible outcome values. This in necessary since the original data has large runs of ascending rows with only a single outcome level.  
+
 ```{r eval=TRUE, echo=TRUE, results='hide'}
 inTrain<-createDataPartition(pml2$classe, times = 1, p=0.80)[[1]]
 TrainSet<-pml2[inTrain,]
@@ -143,7 +148,8 @@ any(TestSet %in% ValidSet) # same as above
 ```
 
 <br/>
-Now that we have partitioned the data let's use the new training and validation sets to estimate the out of sample accuracy of our models. As with the benchmark models we will use 5-fold cross validation with each for comparability. Cross validation also gives us generalizability via avoidance of overfitting and high variance. Also, recall that as the number of folds used for CV increases bias decreases as variance increases. I tried values between 2 and 10 and found that 5 was close to optimal.
+Now that we have partitioned the data let's use the new training and validation sets to estimate the out of sample accuracy of our models. As with the benchmark models we will use 5-fold cross validation with each for comparability. Cross validation also gives us generalizability via avoidance of overfitting and high variance. Also, recall that as the number of folds used for CV increases bias decreases as variance increases. I tried values between 2 and 10 and found that 5 was close to optimal. 
+
 ```{r eval=TRUE, echo=TRUE, results='hide'}
 control <- trainControl(method="cv", number=5) # again, we use 5-fold CV
 
@@ -205,7 +211,8 @@ mean(ValidSet$gbm_preds==ValidSet$classe) # gbm
 ```
 
 <br/>
-Our estimates of out of sample accuracy weren't that far off from our in-sample estiamtes of error. That is not too surprising considering we intentionally used feature elimination and cross validation to avoid overfitting. Of course, we also employed boosting and bagging as well in the gbm and tree based methods respectively. Also note that as we fit these models we also added their predictions as additional columns to the validation and 'testing' datasets. This can allow us to build either a blended model that uses features from the datasets along with the predictions, or a stacked model that uses only the predictions themselves. To use only the predictions themselves they must be pulled into a dedicated data frame. Since this was the manual ensembling technique presented by Dr. Peng I chose to try this first. Also, I chose to leave out the lda model as it was the poorest performer. 
+Our estimates of out of sample accuracy weren't that far off from our in-sample estiamtes of error. That is not too surprising considering we intentionally used feature elimination and cross validation to avoid overfitting. Of course, we also employed boosting and bagging as well in the gbm and tree based methods respectively. Also note that as we fit these models we also added their predictions as additional columns to the validation and 'testing' datasets. This can allow us to build either a blended model that uses features from the datasets along with the predictions, or a stacked model that uses only the predictions themselves. To use only the predictions themselves they must be pulled into a dedicated data frame. Since this was the manual ensembling technique presented by Dr. Peng I chose to try this first. Also, I chose to leave out the lda model as it was the poorest performer.  
+
 ```{r eval=TRUE, echo=TRUE, results='hide'}
 # Next we create a dataframe with just the validation set predictions
 # from all of the models
@@ -238,7 +245,8 @@ confusionMatrix(TestPreds,TestSet$classe)
 ```
 
 <br/>
-Unfortunately, our accuracy with the stacked model was not any real increase over the rf model alone! Let's compare its performance with the accuracies of the individual models on our 'new' test dataset. Also, I was curious how a simple majority vote based on the predictions of the three individual models would compare to our stacked model. 
+Unfortunately, our accuracy with the stacked model was not any real increase over the rf model alone! Let's compare its performance with the accuracies of the individual models on our 'new' test dataset. Also, I was curious how a simple majority vote based on the predictions of the three individual models would compare to our stacked model.  
+
 ```{r eval=TRUE, echo=TRUE, results="asis"}
 mean(TestPreds==TestSet$classe)
 ```
@@ -268,7 +276,8 @@ for(i in 1:nrow(PredsDF_T)){
 mean(PredsDF_T$classe==PredsDF_T$maj)      # boo!
 ```
 
-So, it appears that we should perhaps try something else. Since ensembling frequently increases the accuracy above that of a single model, I decided to evaluate a blended model that only incorporated the rf and the treebag models, as they had the highest estimates of out of sample error. To do this we want to verify our choice of features for the rf model, since it is the highest performer. We will also create a new data frame that contains the features that we have chosen as being of high importance to both the rf and the treebag models.
+So, it appears that we should perhaps try something else. Since ensembling frequently increases the accuracy above that of a single model, I decided to evaluate a blended model that only incorporated the rf and the treebag models, as they had the highest estimates of out of sample error. To do this we want to verify our choice of features for the rf model, since it is the highest performer. We will also create a new data frame that contains the features that we have chosen as being of high importance to both the rf and the treebag models.  
+
 ```{r eval=TRUE, echo=TRUE, results='hide'}
 # this call to rfcv() verifies that ~14+ is a good number of predictors for rf
 result<-rfcv(pml2[,names(pml2)!="classe"],pml2$classe, cv.fold = 10)
@@ -287,7 +296,8 @@ pml3<-pml2[,c(feats,"classe")] # new dataset that contains only those features
 ```
 
 <br/>
-Next we cut the dataset into three random parts as we did before when we were stacking the rf, treebag, and gbm models.
+Next we cut the dataset into three random parts as we did before when we were stacking the rf, treebag, and gbm models.  
+
 ```{r echo=TRUE, eval=TRUE, results='hide'}
 inTrain<-createDataPartition(pml3$classe, times = 1, p=0.80)[[1]]
 TrainSet<-pml3[inTrain,]
@@ -301,7 +311,8 @@ any(TestSet %in% ValidSet) # same as above
 ```
 
 <br/>
-Just like we did with the individual models that we used to create the stacked model, we will estimate out of sample error and then compare those values to the accuracy of the final ensembled model. The code is similar to that for the stacked except that we are using all of the predictors used to train the component models (18 available in the data sets we're using for this purpose) and the predictions those models made all together to train the final blended model. Also, we've used 10-fold CV in the model training, as I found heuristically that this was close to optimal.
+Just like we did with the individual models that we used to create the stacked model, we will estimate out of sample error and then compare those values to the accuracy of the final ensembled model. The code is similar to that for the stacked except that we are using all of the predictors used to train the component models (18 available in the data sets we're using for this purpose) and the predictions those models made all together to train the final blended model. Also, we've used 10-fold CV in the model training, as I found heuristically that this was close to optimal.  
+
 ```{r echo = TRUE, eval=TRUE, results='hide'}
 control <- trainControl(method="cv", number=10) # here we'll use 10-fold CV
 
