@@ -261,7 +261,7 @@ confusionMatrix(ValidSet$treebag_preds, ValidSet$classe)
 TestSet$treebag_preds &lt;- predict(model2, newdata = TestSet[, names(TestSet) != 
     &quot;classe&quot;])
 
-model3 &lt;- train(classe ~ ., data = pml2[, c(predictors(results3), &quot;classe&quot;)], 
+model3 &lt;- train(classe ~ ., data = TrainSet[, c(predictors(results3), &quot;classe&quot;)], 
     method = &quot;lda&quot;, preProcess = c(&quot;center&quot;, &quot;scale&quot;), trControl = control)
 ValidSet$lda_preds &lt;- predict(model3, newdata = ValidSet[, names(ValidSet) != 
     &quot;classe&quot;])
@@ -269,7 +269,7 @@ mean(ValidSet$lda_preds == ValidSet$classe)  # akin to out of sample accuracy (~
 confusionMatrix(ValidSet$lda_preds, ValidSet$classe)
 TestSet$lda_preds &lt;- predict(model3, newdata = TestSet[, names(TestSet) != &quot;classe&quot;])
 
-model4 &lt;- train(classe ~ ., data = pml2[, c(predictors(results2)[1:20], &quot;classe&quot;)], 
+model4 &lt;- train(classe ~ ., data = TrainSet[, c(predictors(results2)[1:20], &quot;classe&quot;)], 
     method = &quot;gbm&quot;, preProcess = c(&quot;center&quot;, &quot;scale&quot;), trControl = control)
 ValidSet$gbm_preds &lt;- predict(model4, newdata = ValidSet[, names(ValidSet) != 
     &quot;classe&quot;])

@@ -1,4 +1,6 @@
-####################### ML FINAL PROJECT ##############################################
+#######################################################################################
+### ML FINAL PROJECT ###
+
 # pml<- read.csv("pml-training.csv") # works if file is in wd, otherwise see below
 # View(pml)
 library(RCurl)
@@ -131,7 +133,7 @@ TestSet$treebag_preds<-predict(model2,
                                   newdata = TestSet[,names(TestSet)!="classe"])
 
 model3 <- train(classe~.,
-                data=pml2[,c(predictors(results3),"classe")],
+                data=TrainSet[,c(predictors(results3),"classe")],
                 method="lda", preProcess=c("center", "scale"),
                 trControl=control)
 ValidSet$lda_preds<-predict(model3,
@@ -142,14 +144,14 @@ TestSet$lda_preds<-predict(model3,
                               newdata = TestSet[,names(TestSet)!="classe"])
 
 model4 <- train(classe~.,
-                data=pml2[,c(predictors(results2)[1:20],"classe")],
+                data=TrainSet[,c(predictors(results2)[1:20],"classe")],
                 method="gbm", preProcess=c("center", "scale"),
                 trControl=control)
-ValidSet$gam_preds<-predict(model4,
+ValidSet$gbm_preds<-predict(model4,
                             newdata = ValidSet[,names(ValidSet)!="classe"])
-mean(ValidSet$gam_preds==ValidSet$classe) # akin to out of sample accuracy (.971)
-confusionMatrix(ValidSet$gam_preds,ValidSet$classe)
-TestSet$gam_preds<-predict(model4,
+mean(ValidSet$gbm_preds==ValidSet$classe) # akin to out of sample accuracy (.971)
+confusionMatrix(ValidSet$gbm_preds,ValidSet$classe)
+TestSet$gbm_preds<-predict(model4,
                               newdata = TestSet[,names(TestSet)!="classe"])
 
 # Next we create a dataframe with just the validation set predictions
@@ -157,7 +159,7 @@ TestSet$gam_preds<-predict(model4,
 PredsDF_V<-data.frame(rfPreds = ValidSet$rf_preds,
                     treebagPreds = ValidSet$treebag_preds,
                     #ldaPreds = ValidSet$lda_preds,
-                    gbmPreds = ValidSet$gam_preds,
+                    gbmPreds = ValidSet$gbm_preds,
                     classe = ValidSet$classe)
 
 # We train a model on the predictions in the dataframe populated
@@ -171,7 +173,7 @@ StackedMod<- train(classe~.,data = PredsDF_V, method = "rf",
 PredsDF_T<-data.frame(rfPreds = TestSet$rf_preds,
                       treebagPreds = TestSet$treebag_preds,
                       #ldaPreds = TestSet$lda_preds,
-                      gbmPreds = TestSet$gam_preds,
+                      gbmPreds = TestSet$gbm_preds,
                       classe = TestSet$classe)
 # We make predictions using the stacked model on the 'test' set
 # predictions, which were made by the models trained on the training
@@ -199,8 +201,7 @@ for(i in 1:nrow(PredsDF_T)){
 mean(PredsDF_T$classe==PredsDF_T$maj) #(0.984), boo!
 
 
-######################################################################
-
+#######################################################################################
 ## Here, we're going to try blending the top two models and see if we can't
 ## get a bump in our proxy for out of sample error
 
@@ -258,9 +259,30 @@ TestSet$treebag_preds<-predict(model2,
 BlendMod<- train(classe~., data = ValidSet, method = "rf",
                    preProcess =c("center","scale"),
                    trControl = control)
-StackedPreds<- predict(BlendMod, TestSet[,names(TestSet)!="classe"])
-mean(StackedPreds==TestSet$classe) # (~0.994) akin to out of sample accuracy for our
+BlendedPreds<- predict(BlendMod, TestSet[,names(TestSet)!="classe"])
+mean(BlendedPreds==TestSet$classe) # (~0.994) akin to out of sample accuracy for our
 # final, blended model (better than either model alone, which was not the case when 
 # we trained a stacked model on the predictions from the other initial models alone)
 
-#####################################################################################
+#######################################################################################
+##### Now, we'll predict on the actual testing set ##### 
+setwd("~/R_wd")
+realTestDF<-read.csv('pml-testing.csv') # see top of script for alternate method
+realTestDF<-realTestDF[,colSums(is.na(realTestDF))==0]
+realTestDF<-realTestDF[,!apply(realTestDF, 2, function(x) any(x==""))]
+realTestDF<-realTestDF[,8:60]
+realTestDF$rf_preds<-predict(model1,
+                          newdata = realTestDF[,feats])
+realTestDF$treebag_preds<-predict(model2,
+                               newdata = realTestDF[,feats])
+FinalPreds<- predict(BlendMod, realTestDF[,names(realTestDF)!="classe"])
+print(FinalPreds)
+realTestDF$final_preds<-FinalPreds
+save('realTestDF', file = 'realTestDF.rda')
+write.csv(realTestDF, 'realTestDF.csv', row.names = FALSE)
+realTestDF2<-data.frame(realTestDF[,feats],realTestDF[,((ncol(realTestDF)-2):ncol(realTestDF))])
+save('realTestDF2', file = 'realTestDF2.rda')
+write.csv(realTestDF2, 'realTestDF2.csv', row.names = FALSE)
+save('FinalPreds', file = 'FinalPreds.rda')
+save.image('mlFinalProjWS.RData')
+#########################################################
